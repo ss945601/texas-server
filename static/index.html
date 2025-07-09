@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Poker Game</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; }
+        #messages { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+        #chat-input { width: calc(100% - 80px); padding: 8px; }
+        #send-chat { padding: 8px 15px; }
+        .player-card { border: 1px solid #eee; padding: 10px; margin-bottom: 5px; background-color: #f9f9f9; }
+        .your-turn { background-color: #e0ffe0; border-color: green; }
+        .player-active { color: green; font-weight: bold; }
+        .player-inactive { color: gray; }
+        .player-folded { text-decoration: line-through; color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Simple Poker Client</h1>
+    <p>Your Player ID: <span id="player-id"></span></p>
+    <p>Your Player Name: <span id="player-name"></span></p>
+    <p>Game ID: <span id="game-id"></span></p>
+    <p>Game State: <span id="game-state"></span></p>
+    <p>Pot: <span id="pot">0</span> chips</p>
+    <p>Community Cards: <span id="community-cards"></span></p>
+    <p>Your Hole Cards: <span id="hole-cards"></span></p>
+    <p>Your Chips: <span id="your-chips"></span></p>
+    <p>Your Bet: <span id="your-bet"></span></p>
+
+    <h2>Players</h2>
+    <div id="players-list"></div>
+
+    <h2>Actions</h2>
+    <input type="number" id="bet-amount" placeholder="Amount (for bet/raise)">
+    <button onclick="sendAction('fold')">Fold</button>
+    <button onclick="sendAction('check')">Check</button>
+    <button onclick="sendAction('call')">Call</button>
+    <button onclick="sendAction('bet')">Bet</button>
+    <button onclick="sendAction('raise')">Raise</button>
+
+    <h2>Chat</h2>
+    <div id="messages"></div>
+    <input type="text" id="chat-input" placeholder="Type your message...">
+    <button id="send-chat">Send</button>
+
+    <script>
+        const ws = new WebSocket("ws://localhost:8080/ws");
+        let playerID = '';
+        let playerName = '';
+        let gameID = '';
+        let yourCurrentBet = 0;
+
+        ws.onopen = (event) => {
+            console.log("WebSocket opened:", event);
+        };
+
+        ws.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            console.log("Received:", msg);
+
+            switch (msg.Type) {
+                case "welcome":
+                    playerID = msg.Payload.playerID;
+                    playerName = msg.Payload.playerName;
+                    gameID = msg.Payload.gameID;
+                    document.getElementById('player-id').textContent = playerID;
+                    document.getElementById('player-name').textContent = playerName;
+                    document.getElementById('game-id').textContent = gameID;
+                    addMessage('System', `Welcome, ${playerName}! Your ID is ${playerID}. Game ID: ${gameID}`);
+                    break;
+                case "gameState":
+                    const gameState = msg.Payload;
+                    document.getElementById('game-state').textContent = gameState.State;
+                    document.getElementById('pot').textContent = gameState.Pot;
+
+                    // Community cards
+                    document.getElementById('community-cards').textContent = gameState.CommunityCards.map(c => `${c.Rank}${c.Suit[0].toUpperCase()}`).join(', ');
+
+                    // Update players list
+                    const playersList = document.getElementById('players-list');
+                    playersList.innerHTML = ''; // Clear previous list
+
+                    let yourPlayerState = null;
+                    gameState.Players.forEach(p => {
+                        const playerDiv = document.createElement('div');
+                        playerDiv.classList.add('player-card');
+
+                        let statusClass = 'player-inactive';
+                        if (p.Active) {
+                            statusClass = 'player-active';
+                        }
+                        if (p.Folded) {
+                            statusClass = 'player-folded';
+                        }
+                        if (gameState.Players[gameState.CurrentTurn] && gameState.Players[gameState.CurrentTurn].ID === p.ID) {
+                            playerDiv.classList.add('your-turn');
+                        }
+
+                        if (p.ID === playerID) {
+                            yourPlayerState = p;
+                            playerDiv.innerHTML = `<strong>${p.Name} (You)</strong> <span class="${statusClass}">(Active: ${p.Active}, Folded: ${p.Folded})</span><br>
+                                                   Chips: ${p.Chips}, Bet: ${p.Bet}<br>
+                                                   Hole Cards: ${p.HoleCards.map(c => `${c.Rank}${c.Suit[0].toUpperCase()}`).join(', ')}`;
+                        } else {
+                            playerDiv.innerHTML = `<strong>${p.Name}</strong> <span class="${statusClass}">(Active: ${p.Active}, Folded: ${p.Folded})</span><br>
+                                                   Chips: ${p.Chips}, Bet: ${p.Bet}<br>
+                                                   Hole Cards: ${p.HoleCards.length > 0 ? p.HoleCards.map(c => `${c.Rank}${c.Suit[0].toUpperCase()}`).join(', ') : 'Hidden'}`;
+                        }
+                        playersList.appendChild(playerDiv);
+                    });
+
+                    // Update your specific player info
+                    if (yourPlayerState) {
+                        document.getElementById('hole-cards').textContent = yourPlayerState.HoleCards.map(c => `${c.Rank}${c.Suit[0].toUpperCase()}`).join(', ');
+                        document.getElementById('your-chips').textContent = yourPlayerState.Chips;
+                        document.getElementById('your-bet').textContent = yourPlayerState.Bet;
+                        yourCurrentBet = yourPlayerState.Bet;
+                    }
+
+                    if (gameState.YourTurn) {
+                        addMessage('System', "It's YOUR turn!");
+                    }
+                    break;
+                case "winner":
+                    addMessage('System', `🎉 ${msg.Payload.playerName} won ${msg.Payload.amount} chips! 🎉`);
+                    break;
+                case "chat":
+                    addMessage(msg.Payload.playerName, msg.Payload.message);
+                    break;
+                case "error":
+                    addMessage('Error', msg.Payload.message);
+                    break;
+                default:
+                    console.warn("Unknown message type:", msg.Type);
+            }
+        };
+
+        ws.onclose = (event) => {
+            console.log("WebSocket closed:", event);
+            addMessage('System', "Connection to server closed.");
+        };
+
+        ws.onerror = (event) => {
+            console.error("WebSocket error:", event);
+            addMessage('System', "WebSocket error occurred.");
+        };
+
+        function addMessage(sender, message) {
+            const messagesDiv = document.getElementById('messages');
+            const p = document.createElement('p');
+            p.textContent = `[${sender}]: ${message}`;
+            messagesDiv.appendChild(p);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to bottom
+        }
+
+        function sendAction(actionType) {
+            const amountInput = document.getElementById('bet-amount');
+            let amount = parseInt(amountInput.value);
+
+            if (isNaN(amount) && (actionType === 'bet' || actionType === 'raise')) {
+                alert("Please enter a valid amount for bet/raise.");
+                return;
+            }
+
+            if (actionType === 'call') {
+                // Client-side approximation for call amount
+                // The server will calculate the exact amount
+                amount = 0; // Sending 0 as amount for call is fine, server determines actual call amount
+            } else if (actionType === 'check' || actionType === 'fold') {
+                amount = 0;
+            }
+
+            const actionMessage = {
+                Type: "action",
+                Payload: {
+                    Type: actionType,
+                    Amount: amount,
+                },
+            };
+            ws.send(JSON.stringify(actionMessage));
+            amountInput.value = ''; // Clear input after sending
+        }
+
+        document.getElementById('send-chat').addEventListener('click', () => {
+            const chatInput = document.getElementById('chat-input');
+            const message = chatInput.value.trim();
+            if (message) {
+                ws.send(JSON.stringify({ Type: "chat", Payload: message }));
+                chatInput.value = '';
+            }
+        });
+
+        // Handle Enter key for chat
+        document.getElementById('chat-input').addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                document.getElementById('send-chat').click();
+            }
+        });
+    </script>
+</body>
+</html>
