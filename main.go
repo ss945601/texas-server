@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/mitchellh/mapstructure"
 )
 
 // Card represents a playing card
@@ -856,16 +857,16 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 				conn.SetReadDeadline(time.Now().Add(pongWait))
 				updateLastHeartbeat(player.ID) // Update the last heartbeat time
 				log.Printf("Received heartbeat from player %s.", player.Name)
-				
+
 				// Send a heartbeat response back to the client
 				heartbeatResponse := Message{
 					Type: "heartbeat_ack",
 					Payload: map[string]interface{}{
 						"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
-						"status": "ok",
+						"status":    "ok",
 					},
 				}
-				
+
 				if err := conn.WriteJSON(heartbeatResponse); err != nil {
 					log.Printf("Error sending heartbeat response to %s: %v", player.Name, err)
 				}
@@ -895,14 +896,14 @@ func updateLastHeartbeat(playerID string) {
 func getLastHeartbeat(playerID string) time.Time {
 	heartbeatMutex.Lock()
 	defer heartbeatMutex.Unlock()
-	
+
 	lastTime, ok := lastHeartbeats[playerID]
 	if !ok {
 		// If no heartbeat recorded yet, use current time
 		lastTime = time.Now()
 		lastHeartbeats[playerID] = lastTime
 	}
-	
+
 	return lastTime
 }
 
@@ -911,18 +912,18 @@ func pingSender(conn *websocket.Conn, stop chan struct{}, playerID string) {
 	ticker := time.NewTicker(pingPeriod)
 	// Initialize the last heartbeat time
 	updateLastHeartbeat(playerID)
-	
+
 	defer func() {
 		ticker.Stop()
 		conn.Close() // Close connection when ping sender stops
 		log.Printf("Ping sender for player %s stopping.", playerID)
-		
+
 		// Clean up the heartbeat entry
 		heartbeatMutex.Lock()
 		delete(lastHeartbeats, playerID)
 		heartbeatMutex.Unlock()
 	}()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -932,7 +933,7 @@ func pingSender(conn *websocket.Conn, stop chan struct{}, playerID string) {
 				log.Printf("No heartbeat received from player %s in %v, closing connection", playerID, pongWait)
 				return
 			}
-			
+
 			conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				log.Printf("Ping error for player %s: %v", playerID, err)
@@ -975,19 +976,4 @@ func main() {
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
 	}
-}
-
-// Dummy mapstructure.Decode for compilation, replace with real library if needed
-// This is a placeholder. You'd typically use "github.com/mitchellh/mapstructure"
-// to decode generic interface{} into a struct.
-var mapstructure = dummyMapstructure{}
-
-type dummyMapstructure struct{}
-
-func (d dummyMapstructure) Decode(input interface{}, output interface{}) error {
-	data, err := json.Marshal(input)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(data, output)
 }
