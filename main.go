@@ -768,7 +768,10 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 	conn.SetReadLimit(maxMessageSize)
 	conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
+		// Update read deadline and last heartbeat time on pong
 		conn.SetReadDeadline(time.Now().Add(pongWait))
+		updateLastHeartbeat(player.ID) // Update the last heartbeat time on pong
+		log.Printf("Received pong from player %s.", player.Name)
 		return nil
 	})
 
@@ -849,10 +852,23 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 				game.Mutex.Unlock()
 
 			case "heartbeat":
-				// Client sent a heartbeat, no explicit action needed on server side
-				// as pong handler already updates read deadline.
-				// This case is mostly for client-initiated heartbeats if desired.
+				// Client sent a heartbeat, update the read deadline and lastHeartbeat time
+				conn.SetReadDeadline(time.Now().Add(pongWait))
+				updateLastHeartbeat(player.ID) // Update the last heartbeat time
 				log.Printf("Received heartbeat from player %s.", player.Name)
+				
+				// Send a heartbeat response back to the client
+				heartbeatResponse := Message{
+					Type: "heartbeat_ack",
+					Payload: map[string]interface{}{
+						"timestamp": time.Now().UnixNano() / int64(time.Millisecond),
+						"status": "ok",
+					},
+				}
+				
+				if err := conn.WriteJSON(heartbeatResponse); err != nil {
+					log.Printf("Error sending heartbeat response to %s: %v", player.Name, err)
+				}
 
 			default:
 				log.Printf("Unknown message type '%s' from player %s (ID: %s)", msg.Type, player.Name, player.ID)
@@ -862,17 +878,61 @@ func handleConnection(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Player's last heartbeat time, protected by a mutex
+var (
+	heartbeatMutex sync.Mutex
+	lastHeartbeats = make(map[string]time.Time)
+)
+
+// updateLastHeartbeat updates the last heartbeat time for a player
+func updateLastHeartbeat(playerID string) {
+	heartbeatMutex.Lock()
+	lastHeartbeats[playerID] = time.Now()
+	heartbeatMutex.Unlock()
+}
+
+// getLastHeartbeat gets the last heartbeat time for a player
+func getLastHeartbeat(playerID string) time.Time {
+	heartbeatMutex.Lock()
+	defer heartbeatMutex.Unlock()
+	
+	lastTime, ok := lastHeartbeats[playerID]
+	if !ok {
+		// If no heartbeat recorded yet, use current time
+		lastTime = time.Now()
+		lastHeartbeats[playerID] = lastTime
+	}
+	
+	return lastTime
+}
+
 // pingSender sends ping messages to the client to keep the connection alive.
 func pingSender(conn *websocket.Conn, stop chan struct{}, playerID string) {
 	ticker := time.NewTicker(pingPeriod)
+	// Initialize the last heartbeat time
+	updateLastHeartbeat(playerID)
+	
 	defer func() {
 		ticker.Stop()
 		conn.Close() // Close connection when ping sender stops
 		log.Printf("Ping sender for player %s stopping.", playerID)
+		
+		// Clean up the heartbeat entry
+		heartbeatMutex.Lock()
+		delete(lastHeartbeats, playerID)
+		heartbeatMutex.Unlock()
 	}()
+	
 	for {
 		select {
 		case <-ticker.C:
+			// Check if we haven't received a heartbeat in too long
+			lastHB := getLastHeartbeat(playerID)
+			if time.Since(lastHB) > pongWait {
+				log.Printf("No heartbeat received from player %s in %v, closing connection", playerID, pongWait)
+				return
+			}
+			
 			conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				log.Printf("Ping error for player %s: %v", playerID, err)

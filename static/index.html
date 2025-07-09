@@ -188,9 +188,35 @@
             z-index: 10;
             animation: fadeIn 0.5s;
         }
+        .system-message {
+            font-style: italic;
+            color: #ff6b6b;
+        }
+        .connection-status {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .connection-status.connected {
+            background-color: #33cc33;
+        }
+        .connection-status.disconnected {
+            background-color: #ff3333;
+        }
+        .connection-status.connecting {
+            background-color: #ffcc00;
+            animation: blink 1s infinite;
+        }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
+        }
+        @keyframes blink {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
         }
     </style>
 </head>
@@ -199,6 +225,10 @@
         <h1>Texas Hold'em Poker</h1>
         
         <div class="game-info">
+            <div id="connection-info">
+                <span class="connection-status disconnected" id="connection-status"></span>
+                <span id="connection-text">Disconnected</span>
+            </div>
             <div id="game-state">Waiting for players...</div>
             <div id="player-info">Your chips: 1000</div>
         </div>
@@ -275,8 +305,62 @@
             '2': '2'
         };
         
+        // Heartbeat configuration
+        const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+        let heartbeatInterval;
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 5;
+        const RECONNECT_DELAY = 3000; // 3 seconds
+        
+        // Start sending heartbeats
+        function startHeartbeat() {
+            // Clear any existing interval
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            
+            // Set up new heartbeat interval
+            heartbeatInterval = setInterval(() => {
+                if (socket && socket.readyState === WebSocket.OPEN) {
+                    console.log('Sending heartbeat');
+                    const heartbeatMsg = {
+                        type: 'heartbeat',
+                        payload: { timestamp: Date.now() }
+                    };
+                    socket.send(JSON.stringify(heartbeatMsg));
+                }
+            }, HEARTBEAT_INTERVAL);
+        }
+        
+        // Update connection status UI
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connection-status');
+            const textElement = document.getElementById('connection-text');
+            
+            statusElement.className = 'connection-status';
+            
+            switch(status) {
+                case 'connected':
+                    statusElement.classList.add('connected');
+                    textElement.textContent = 'Connected';
+                    textElement.style.color = '#33cc33';
+                    break;
+                case 'disconnected':
+                    statusElement.classList.add('disconnected');
+                    textElement.textContent = 'Disconnected';
+                    textElement.style.color = '#ff3333';
+                    break;
+                case 'connecting':
+                    statusElement.classList.add('connecting');
+                    textElement.textContent = 'Connecting...';
+                    textElement.style.color = '#ffcc00';
+                    break;
+            }
+        }
+        
         // Connect to WebSocket server
         function connectWebSocket() {
+            // Update status to connecting
+            updateConnectionStatus('connecting');
+            
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws`;
             
@@ -284,6 +368,10 @@
             
             socket.onopen = function(e) {
                 console.log('WebSocket connection established');
+                reconnectAttempts = 0; // Reset reconnect attempts on successful connection
+                startHeartbeat(); // Start the heartbeat
+                updateConnectionStatus('connected');
+                addSystemMessage('Connected to server');
             };
             
             socket.onmessage = function(event) {
@@ -293,12 +381,45 @@
             
             socket.onclose = function(event) {
                 console.log('WebSocket connection closed');
-                setTimeout(connectWebSocket, 2000); // Try to reconnect after 2 seconds
+                // Stop the heartbeat when connection is closed
+                if (heartbeatInterval) clearInterval(heartbeatInterval);
+                // Update connection status
+                updateConnectionStatus('disconnected');
+                // Attempt to reconnect
+                attemptReconnect();
             };
             
             socket.onerror = function(error) {
                 console.error('WebSocket error:', error);
+                // Stop the heartbeat on error
+                if (heartbeatInterval) clearInterval(heartbeatInterval);
+                updateConnectionStatus('disconnected');
+                addSystemMessage('Connection error occurred');
             };
+        }
+        
+        // Reconnect logic
+        function attemptReconnect() {
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                
+                // Update status and notify user
+                updateConnectionStatus('connecting');
+                addSystemMessage(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                
+                setTimeout(connectWebSocket, RECONNECT_DELAY);
+            } else {
+                console.error('Maximum reconnection attempts reached. Please refresh the page.');
+                // Update status and notify user
+                updateConnectionStatus('disconnected');
+                addSystemMessage('Maximum reconnection attempts reached. Please refresh the page.');
+                
+                // Display reconnection error in game state
+                const gameStateElement = document.getElementById('game-state');
+                gameStateElement.textContent = 'Connection lost. Please refresh the page.';
+                gameStateElement.style.color = 'red';
+            }
         }
         
         // Handle incoming messages
@@ -324,6 +445,20 @@
                 case 'chat':
                     addChatMessage(message.payload);
                     break;
+                    
+                case 'heartbeat_ack':
+                    console.log('Received heartbeat acknowledgment from server');
+                    break;
+                    
+                case 'error':
+                    console.error('Server error:', message.payload.message);
+                    // Optionally display error to user
+                    const errorMsg = `Error: ${message.payload.message}`;
+                    addSystemMessage(errorMsg);
+                    break;
+                    
+                default:
+                    console.log('Unknown message type:', message.type);
             }
         }
         
@@ -528,6 +663,17 @@
             const messageElement = document.createElement('div');
             
             messageElement.innerHTML = `<strong>${chatData.playerName}:</strong> ${chatData.message}`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        // Add system message to chat
+        function addSystemMessage(message) {
+            const chatBox = document.getElementById('chat-box');
+            const messageElement = document.createElement('div');
+            
+            messageElement.innerHTML = `<em class="system-message">${message}</em>`;
+            messageElement.style.color = '#ff6b6b';
             chatBox.appendChild(messageElement);
             chatBox.scrollTop = chatBox.scrollHeight;
         }
