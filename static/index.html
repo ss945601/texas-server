@@ -1,200 +1,593 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Poker Game</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texas Hold'em Poker</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; }
-        #messages { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
-        #chat-input { width: calc(100% - 80px); padding: 8px; }
-        #send-chat { padding: 8px 15px; }
-        .player-card { border: 1px solid #eee; padding: 10px; margin-bottom: 5px; background-color: #f9f9f9; }
-        .your-turn { background-color: #e0ffe0; border-color: green; }
-        .player-active { color: green; font-weight: bold; }
-        .player-inactive { color: gray; }
-        .player-folded { text-decoration: line-through; color: orange; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .game-table {
+            background-color: #0a6e0a;
+            border-radius: 200px;
+            padding: 40px;
+            position: relative;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            min-height: 400px;
+        }
+        .community-cards {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .card {
+            width: 80px;
+            height: 120px;
+            background-color: #fff;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            color: #000;
+            position: relative;
+        }
+        .card.hearts, .card.diamonds {
+            color: #ff0000;
+        }
+        .card.spades, .card.clubs {
+            color: #000;
+        }
+        .card-placeholder {
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+        }
+        .card-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .card-suit {
+            font-size: 24px;
+            text-align: center;
+        }
+        .players {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+        }
+        .player {
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 10px;
+            margin: 10px;
+            width: 200px;
+            text-align: center;
+        }
+        .player.current-turn {
+            box-shadow: 0 0 10px 5px #ffcc00;
+        }
+        .player.folded {
+            opacity: 0.5;
+        }
+        .player-cards {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .player-cards .card {
+            width: 60px;
+            height: 90px;
+        }
+        .pot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .fold-btn {
+            background-color: #ff3333;
+            color: white;
+        }
+        .check-btn {
+            background-color: #33cc33;
+            color: white;
+        }
+        .call-btn {
+            background-color: #3399ff;
+            color: white;
+        }
+        .bet-btn, .raise-btn {
+            background-color: #ffcc00;
+            color: black;
+        }
+        .bet-input {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 100px;
+        }
+        .game-info {
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+        .chat-box {
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .chat-input button {
+            background-color: #3399ff;
+            color: white;
+        }
+        .hidden {
+            display: none;
+        }
+        .winner-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 10;
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
-    <h1>Simple Poker Client</h1>
-    <p>Your Player ID: <span id="player-id"></span></p>
-    <p>Your Player Name: <span id="player-name"></span></p>
-    <p>Game ID: <span id="game-id"></span></p>
-    <p>Game State: <span id="game-state"></span></p>
-    <p>Pot: <span id="pot">0</span> chips</p>
-    <p>Community Cards: <span id="community-cards"></span></p>
-    <p>Your Hole Cards: <span id="hole-cards"></span></p>
-    <p>Your Chips: <span id="your-chips"></span></p>
-    <p>Your Bet: <span id="your-bet"></span></p>
-
-    <h2>Players</h2>
-    <div id="players-list"></div>
-
-    <h2>Actions</h2>
-    <input type="number" id="bet-amount" placeholder="Amount (for bet/raise)">
-    <button onclick="sendAction('fold')">Fold</button>
-    <button onclick="sendAction('check')">Check</button>
-    <button onclick="sendAction('call')">Call</button>
-    <button onclick="sendAction('bet')">Bet</button>
-    <button onclick="sendAction('raise')">Raise</button>
-
-    <h2>Chat</h2>
-    <div id="messages"></div>
-    <input type="text" id="chat-input" placeholder="Type your message...">
-    <button id="send-chat">Send</button>
-
+    <div class="container">
+        <h1>Texas Hold'em Poker</h1>
+        
+        <div class="game-info">
+            <div id="game-state">Waiting for players...</div>
+            <div id="player-info">Your chips: 1000</div>
+        </div>
+        
+        <div class="game-table">
+            <div class="community-cards" id="community-cards">
+                <div class="card card-placeholder"></div>
+                <div class="card card-placeholder"></div>
+                <div class="card card-placeholder"></div>
+                <div class="card card-placeholder"></div>
+                <div class="card card-placeholder"></div>
+            </div>
+            
+            <div class="pot" id="pot">Pot: $0</div>
+            
+            <div class="players" id="players">
+                <!-- Players will be added here dynamically -->
+            </div>
+            
+            <div id="winner-message" class="winner-message hidden">
+                <h2>Winner!</h2>
+                <p id="winner-name">Player 1</p>
+                <p id="winner-amount">Won $100</p>
+            </div>
+        </div>
+        
+        <div class="actions" id="actions">
+            <button class="fold-btn" id="fold-btn">Fold</button>
+            <button class="check-btn" id="check-btn">Check</button>
+            <button class="call-btn" id="call-btn">Call</button>
+            <input type="number" class="bet-input" id="bet-amount" min="1" value="10">
+            <button class="bet-btn" id="bet-btn">Bet</button>
+            <button class="raise-btn" id="raise-btn">Raise</button>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-box" id="chat-box"></div>
+            <div class="chat-input">
+                <input type="text" id="chat-input" placeholder="Type a message...">
+                <button id="chat-send">Send</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
-        const ws = new WebSocket("ws://localhost:8080/ws");
+        // Game state variables
         let playerID = '';
         let playerName = '';
-        let gameID = '';
-        let yourCurrentBet = 0;
-
-        ws.onopen = (event) => {
-            console.log("WebSocket opened:", event);
+        let gameState = {};
+        let socket;
+        
+        // Card suit symbols
+        const suitSymbols = {
+            'hearts': '♥',
+            'diamonds': '♦',
+            'clubs': '♣',
+            'spades': '♠'
         };
-
-        ws.onmessage = (event) => {
-            const msg = JSON.parse(event.data);
-            console.log("Received:", msg);
-
-            switch (msg.Type) {
-                case "welcome":
-                    playerID = msg.Payload.playerID;
-                    playerName = msg.Payload.playerName;
-                    gameID = msg.Payload.gameID;
-                    document.getElementById('player-id').textContent = playerID;
-                    document.getElementById('player-name').textContent = playerName;
-                    document.getElementById('game-id').textContent = gameID;
-                    addMessage('System', `Welcome, ${playerName}! Your ID is ${playerID}. Game ID: ${gameID}`);
-                    break;
-                case "gameState":
-                    const gameState = msg.Payload;
-                    document.getElementById('game-state').textContent = gameState.State;
-                    document.getElementById('pot').textContent = gameState.Pot;
-
-                    // Community cards
-                    document.getElementById('community-cards').textContent = gameState.CommunityCards.map(c => `${c.Rank}${c.Suit[0].toUpperCase()}`).join(', ');
-
-                    // Update players list
-                    const playersList = document.getElementById('players-list');
-                    playersList.innerHTML = ''; // Clear previous list
-
-                    let yourPlayerState = null;
-                    gameState.Players.forEach(p => {
-                        const playerDiv = document.createElement('div');
-                        playerDiv.classList.add('player-card');
-
-                        let statusClass = 'player-inactive';
-                        if (p.Active) {
-                            statusClass = 'player-active';
-                        }
-                        if (p.Folded) {
-                            statusClass = 'player-folded';
-                        }
-                        if (gameState.Players[gameState.CurrentTurn] && gameState.Players[gameState.CurrentTurn].ID === p.ID) {
-                            playerDiv.classList.add('your-turn');
-                        }
-
-                        if (p.ID === playerID) {
-                            yourPlayerState = p;
-                            playerDiv.innerHTML = `<strong>${p.Name} (You)</strong> <span class="${statusClass}">(Active: ${p.Active}, Folded: ${p.Folded})</span><br>
-                                                   Chips: ${p.Chips}, Bet: ${p.Bet}<br>
-                                                   Hole Cards: ${p.HoleCards.map(c => `${c.Rank}${c.Suit[0].toUpperCase()}`).join(', ')}`;
-                        } else {
-                            playerDiv.innerHTML = `<strong>${p.Name}</strong> <span class="${statusClass}">(Active: ${p.Active}, Folded: ${p.Folded})</span><br>
-                                                   Chips: ${p.Chips}, Bet: ${p.Bet}<br>
-                                                   Hole Cards: ${p.HoleCards.length > 0 ? p.HoleCards.map(c => `${c.Rank}${c.Suit[0].toUpperCase()}`).join(', ') : 'Hidden'}`;
-                        }
-                        playersList.appendChild(playerDiv);
-                    });
-
-                    // Update your specific player info
-                    if (yourPlayerState) {
-                        document.getElementById('hole-cards').textContent = yourPlayerState.HoleCards.map(c => `${c.Rank}${c.Suit[0].toUpperCase()}`).join(', ');
-                        document.getElementById('your-chips').textContent = yourPlayerState.Chips;
-                        document.getElementById('your-bet').textContent = yourPlayerState.Bet;
-                        yourCurrentBet = yourPlayerState.Bet;
-                    }
-
-                    if (gameState.YourTurn) {
-                        addMessage('System', "It's YOUR turn!");
-                    }
-                    break;
-                case "winner":
-                    addMessage('System', `🎉 ${msg.Payload.playerName} won ${msg.Payload.amount} chips! 🎉`);
-                    break;
-                case "chat":
-                    addMessage(msg.Payload.playerName, msg.Payload.message);
-                    break;
-                case "error":
-                    addMessage('Error', msg.Payload.message);
-                    break;
-                default:
-                    console.warn("Unknown message type:", msg.Type);
-            }
+        
+        // Card rank display
+        const rankDisplay = {
+            'A': 'A',
+            'K': 'K',
+            'Q': 'Q',
+            'J': 'J',
+            '10': '10',
+            '9': '9',
+            '8': '8',
+            '7': '7',
+            '6': '6',
+            '5': '5',
+            '4': '4',
+            '3': '3',
+            '2': '2'
         };
-
-        ws.onclose = (event) => {
-            console.log("WebSocket closed:", event);
-            addMessage('System', "Connection to server closed.");
-        };
-
-        ws.onerror = (event) => {
-            console.error("WebSocket error:", event);
-            addMessage('System', "WebSocket error occurred.");
-        };
-
-        function addMessage(sender, message) {
-            const messagesDiv = document.getElementById('messages');
-            const p = document.createElement('p');
-            p.textContent = `[${sender}]: ${message}`;
-            messagesDiv.appendChild(p);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to bottom
+        
+        // Connect to WebSocket server
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function(e) {
+                console.log('WebSocket connection established');
+            };
+            
+            socket.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                handleMessage(message);
+            };
+            
+            socket.onclose = function(event) {
+                console.log('WebSocket connection closed');
+                setTimeout(connectWebSocket, 2000); // Try to reconnect after 2 seconds
+            };
+            
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
         }
-
-        function sendAction(actionType) {
-            const amountInput = document.getElementById('bet-amount');
-            let amount = parseInt(amountInput.value);
-
-            if (isNaN(amount) && (actionType === 'bet' || actionType === 'raise')) {
-                alert("Please enter a valid amount for bet/raise.");
+        
+        // Handle incoming messages
+        function handleMessage(message) {
+            console.log('Received message:', message);
+            
+            switch(message.type) {
+                case 'welcome':
+                    playerID = message.payload.playerID;
+                    playerName = message.payload.playerName;
+                    document.getElementById('player-info').textContent = `You are ${playerName} - Chips: 1000`;
+                    break;
+                    
+                case 'gameState':
+                    gameState = message.payload;
+                    updateGameState();
+                    break;
+                    
+                case 'winner':
+                    showWinner(message.payload);
+                    break;
+                    
+                case 'chat':
+                    addChatMessage(message.payload);
+                    break;
+            }
+        }
+        
+        // Update the game state display
+        function updateGameState() {
+            // Update game state info
+            const stateText = {
+                'waiting': 'Waiting for players',
+                'preflop': 'Pre-flop',
+                'flop': 'Flop',
+                'turn': 'Turn',
+                'river': 'River',
+                'showdown': 'Showdown'
+            };
+            
+            document.getElementById('game-state').textContent = `Game State: ${stateText[gameState.state] || gameState.state}`;
+            
+            // Update pot
+            document.getElementById('pot').textContent = `Pot: $${gameState.pot}`;
+            
+            // Update community cards
+            const communityCardsContainer = document.getElementById('community-cards');
+            communityCardsContainer.innerHTML = '';
+            
+            // Add actual community cards
+            for (const card of gameState.communityCards) {
+                communityCardsContainer.appendChild(createCardElement(card));
+            }
+            
+            // Add placeholders for remaining cards
+            const remainingCards = 5 - gameState.communityCards.length;
+            for (let i = 0; i < remainingCards; i++) {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'card card-placeholder';
+                communityCardsContainer.appendChild(placeholder);
+            }
+            
+            // Update players
+            const playersContainer = document.getElementById('players');
+            playersContainer.innerHTML = '';
+            
+            gameState.players.forEach((player, index) => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'player';
+                
+                if (index === gameState.currentTurn) {
+                    playerElement.classList.add('current-turn');
+                }
+                
+                if (player.folded) {
+                    playerElement.classList.add('folded');
+                }
+                
+                // Highlight current player
+                if (player.id === playerID) {
+                    playerElement.style.borderColor = '#ffcc00';
+                    playerElement.style.borderWidth = '3px';
+                    playerElement.style.borderStyle = 'solid';
+                }
+                
+                // Player name and chips
+                playerElement.innerHTML = `
+                    <div>${player.name} ${player.folded ? '(Folded)' : ''}</div>
+                    <div>Chips: $${player.chips}</div>
+                    <div>Bet: $${player.bet}</div>
+                `;
+                
+                // Player cards
+                const cardsContainer = document.createElement('div');
+                cardsContainer.className = 'player-cards';
+                
+                if (player.holeCards && player.holeCards.length > 0) {
+                    for (const card of player.holeCards) {
+                        cardsContainer.appendChild(createCardElement(card));
+                    }
+                } else {
+                    // Show card backs for other players
+                    for (let i = 0; i < 2; i++) {
+                        const cardBack = document.createElement('div');
+                        cardBack.className = 'card';
+                        cardBack.style.backgroundColor = '#0066cc';
+                        cardBack.style.backgroundImage = 'repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #0066cc 10px, #0066cc 20px)';
+                        cardsContainer.appendChild(cardBack);
+                    }
+                }
+                
+                playerElement.appendChild(cardsContainer);
+                playersContainer.appendChild(playerElement);
+            });
+            
+            // Update action buttons
+            updateActionButtons();
+        }
+        
+        // Create a card element
+        function createCardElement(card) {
+            const cardElement = document.createElement('div');
+            cardElement.className = `card ${card.suit}`;
+            
+            const topValue = document.createElement('div');
+            topValue.className = 'card-value';
+            topValue.textContent = rankDisplay[card.rank];
+            
+            const suitElement = document.createElement('div');
+            suitElement.className = 'card-suit';
+            suitElement.textContent = suitSymbols[card.suit];
+            
+            const bottomValue = document.createElement('div');
+            bottomValue.className = 'card-value';
+            bottomValue.textContent = rankDisplay[card.rank];
+            
+            cardElement.appendChild(topValue);
+            cardElement.appendChild(suitElement);
+            cardElement.appendChild(bottomValue);
+            
+            return cardElement;
+        }
+        
+        // Update action buttons based on game state
+        function updateActionButtons() {
+            const actionsContainer = document.getElementById('actions');
+            const foldBtn = document.getElementById('fold-btn');
+            const checkBtn = document.getElementById('check-btn');
+            const callBtn = document.getElementById('call-btn');
+            const betInput = document.getElementById('bet-amount');
+            const betBtn = document.getElementById('bet-btn');
+            const raiseBtn = document.getElementById('raise-btn');
+            
+            // Hide all buttons initially
+            foldBtn.style.display = 'none';
+            checkBtn.style.display = 'none';
+            callBtn.style.display = 'none';
+            betInput.style.display = 'none';
+            betBtn.style.display = 'none';
+            raiseBtn.style.display = 'none';
+            
+            // If it's not the player's turn or game is in waiting/showdown state, hide all buttons
+            if (!gameState.yourTurn || gameState.state === 'waiting' || gameState.state === 'showdown') {
                 return;
             }
-
-            if (actionType === 'call') {
-                // Client-side approximation for call amount
-                // The server will calculate the exact amount
-                amount = 0; // Sending 0 as amount for call is fine, server determines actual call amount
-            } else if (actionType === 'check' || actionType === 'fold') {
-                amount = 0;
+            
+            // Find current player
+            const currentPlayer = gameState.players.find(p => p.id === playerID);
+            if (!currentPlayer) return;
+            
+            // Find highest bet
+            let highestBet = 0;
+            for (const player of gameState.players) {
+                if (player.bet > highestBet) {
+                    highestBet = player.bet;
+                }
             }
-
-            const actionMessage = {
-                Type: "action",
-                Payload: {
-                    Type: actionType,
-                    Amount: amount,
-                },
-            };
-            ws.send(JSON.stringify(actionMessage));
-            amountInput.value = ''; // Clear input after sending
+            
+            // Show fold button (always available)
+            foldBtn.style.display = 'block';
+            
+            // Check button is available if no one has bet or player has matched the highest bet
+            if (highestBet === 0 || currentPlayer.bet === highestBet) {
+                checkBtn.style.display = 'block';
+            }
+            
+            // Call button is available if there's a bet to call
+            if (highestBet > currentPlayer.bet) {
+                callBtn.style.display = 'block';
+                callBtn.textContent = `Call $${highestBet - currentPlayer.bet}`;
+            }
+            
+            // Bet/Raise buttons
+            if (currentPlayer.chips > 0) {
+                betInput.style.display = 'block';
+                betInput.min = gameState.bigBlind;
+                betInput.max = currentPlayer.chips;
+                betInput.value = Math.min(gameState.bigBlind, currentPlayer.chips);
+                
+                if (highestBet === 0) {
+                    betBtn.style.display = 'block';
+                } else {
+                    raiseBtn.style.display = 'block';
+                }
+            }
         }
-
-        document.getElementById('send-chat').addEventListener('click', () => {
+        
+        // Show winner message
+        function showWinner(winner) {
+            const winnerMessage = document.getElementById('winner-message');
+            const winnerName = document.getElementById('winner-name');
+            const winnerAmount = document.getElementById('winner-amount');
+            
+            winnerName.textContent = winner.playerName;
+            winnerAmount.textContent = `Won $${winner.amount}`;
+            
+            winnerMessage.classList.remove('hidden');
+            
+            setTimeout(() => {
+                winnerMessage.classList.add('hidden');
+            }, 5000);
+        }
+        
+        // Add chat message
+        function addChatMessage(chatData) {
+            const chatBox = document.getElementById('chat-box');
+            const messageElement = document.createElement('div');
+            
+            messageElement.innerHTML = `<strong>${chatData.playerName}:</strong> ${chatData.message}`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        // Send player action
+        function sendAction(actionType, amount = 0) {
+            const action = {
+                type: actionType,
+                amount: parseInt(amount, 10)
+            };
+            
+            const message = {
+                type: 'action',
+                payload: action
+            };
+            
+            socket.send(JSON.stringify(message));
+        }
+        
+        // Send chat message
+        function sendChatMessage(text) {
+            if (!text.trim()) return;
+            
+            const message = {
+                type: 'chat',
+                payload: text
+            };
+            
+            socket.send(JSON.stringify(message));
+            document.getElementById('chat-input').value = '';
+        }
+        
+        // Event listeners
+        document.getElementById('fold-btn').addEventListener('click', () => sendAction('fold'));
+        document.getElementById('check-btn').addEventListener('click', () => sendAction('check'));
+        document.getElementById('call-btn').addEventListener('click', () => sendAction('call'));
+        document.getElementById('bet-btn').addEventListener('click', () => {
+            const amount = document.getElementById('bet-amount').value;
+            sendAction('bet', amount);
+        });
+        document.getElementById('raise-btn').addEventListener('click', () => {
+            const amount = document.getElementById('bet-amount').value;
+            sendAction('raise', amount);
+        });
+        
+        document.getElementById('chat-send').addEventListener('click', () => {
             const chatInput = document.getElementById('chat-input');
-            const message = chatInput.value.trim();
-            if (message) {
-                ws.send(JSON.stringify({ Type: "chat", Payload: message }));
-                chatInput.value = '';
+            sendChatMessage(chatInput.value);
+        });
+        
+        document.getElementById('chat-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage(e.target.value);
             }
         });
-
-        // Handle Enter key for chat
-        document.getElementById('chat-input').addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                document.getElementById('send-chat').click();
-            }
-        });
+        
+        // Initialize the game
+        window.onload = function() {
+            connectWebSocket();
+        };
     </script>
 </body>
 </html>
