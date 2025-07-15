@@ -4,736 +4,103 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Texas Hold'em Poker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #1a1a1a;
-            color: #fff;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .game-table {
-            background-color: #0a6e0a;
-            border-radius: 200px;
-            padding: 40px;
-            position: relative;
-            margin-bottom: 20px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            min-height: 400px;
-        }
-        .community-cards {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin: 20px 0;
-        }
-        .card {
-            width: 80px;
-            height: 120px;
-            background-color: #fff;
-            border-radius: 5px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            color: #000;
-            position: relative;
-        }
-        .card.hearts, .card.diamonds {
-            color: #ff0000;
-        }
-        .card.spades, .card.clubs {
-            color: #000;
-        }
-        .card-placeholder {
-            background-color: rgba(255, 255, 255, 0.2);
-            border: 2px dashed rgba(255, 255, 255, 0.5);
-        }
-        .card-value {
-            font-size: 20px;
-            font-weight: bold;
-        }
-        .card-suit {
-            font-size: 24px;
-            text-align: center;
-        }
-        .players {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-        }
-        .player {
-            background-color: rgba(0, 0, 0, 0.5);
-            border-radius: 10px;
-            padding: 10px;
-            margin: 10px;
-            width: 200px;
-            text-align: center;
-        }
-        .player.current-turn {
-            box-shadow: 0 0 10px 5px #ffcc00;
-        }
-        .player.folded {
-            opacity: 0.5;
-        }
-        .player-cards {
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-            margin: 10px 0;
-        }
-        .player-cards .card {
-            width: 60px;
-            height: 90px;
-        }
-        .pot {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 24px;
-            font-weight: bold;
-        }
-        .actions {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        .fold-btn {
-            background-color: #ff3333;
-            color: white;
-        }
-        .check-btn {
-            background-color: #33cc33;
-            color: white;
-        }
-        .call-btn {
-            background-color: #3399ff;
-            color: white;
-        }
-        .bet-btn, .raise-btn {
-            background-color: #ffcc00;
-            color: black;
-        }
-        .bet-input {
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            width: 100px;
-        }
-        .game-info {
-            background-color: rgba(0, 0, 0, 0.7);
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 20px;
-        }
-        .chat-box {
-            background-color: rgba(0, 0, 0, 0.7);
-            border-radius: 10px;
-            padding: 10px;
-            height: 200px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-        }
-        .chat-input {
-            display: flex;
-            gap: 10px;
-        }
-        .chat-input input {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        .chat-input button {
-            background-color: #3399ff;
-            color: white;
-        }
-        .hidden {
-            display: none;
-        }
-        .winner-message {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            z-index: 10;
-            animation: fadeIn 0.5s;
-        }
-        .system-message {
-            font-style: italic;
-            color: #ff6b6b;
-        }
-        .connection-status {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-        .connection-status.connected {
-            background-color: #33cc33;
-        }
-        .connection-status.disconnected {
-            background-color: #ff3333;
-        }
-        .connection-status.connecting {
-            background-color: #ffcc00;
-            animation: blink 1s infinite;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        @keyframes blink {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Texas Hold'em Poker</h1>
-        
-        <div class="game-info">
-            <div id="connection-info">
+    <div class="app-container">
+        <header class="game-header">
+            <h1>Texas Hold'em Poker</h1>
+            <div class="connection-info">
                 <span class="connection-status disconnected" id="connection-status"></span>
                 <span id="connection-text">Disconnected</span>
             </div>
-            <div id="game-state">Waiting for players...</div>
-            <div id="player-info">Your chips: 1000</div>
-        </div>
+        </header>
         
-        <div class="game-table">
-            <div class="community-cards" id="community-cards">
-                <div class="card card-placeholder"></div>
-                <div class="card card-placeholder"></div>
-                <div class="card card-placeholder"></div>
-                <div class="card card-placeholder"></div>
-                <div class="card card-placeholder"></div>
-            </div>
+        <main class="game-container">
+            <aside class="game-sidebar">
+                <div class="game-info-panel">
+                    <h2>Game Info</h2>
+                    <div id="game-state">Waiting for connection...</div>
+                    <div id="player-info">Connecting...</div>
+                    <div id="blinds-info">Blinds: $5/$10</div>
+                </div>
+                
+                <div class="chat-container">
+                    <h2>Chat</h2>
+                    <div class="chat-box" id="chat-box"></div>
+                    <div class="chat-input">
+                        <input type="text" id="chat-input" placeholder="Type a message..." maxlength="200">
+                        <button id="chat-send" class="btn btn-primary">Send</button>
+                    </div>
+                </div>
+            </aside>
             
-            <div class="pot" id="pot">Pot: $0</div>
-            
-            <div class="players" id="players">
-                <!-- Players will be added here dynamically -->
+            <div class="game-table-container">
+                <div class="game-table">
+                    <div class="community-cards" id="community-cards">
+                        <div class="card card-placeholder"></div>
+                        <div class="card card-placeholder"></div>
+                        <div class="card card-placeholder"></div>
+                        <div class="card card-placeholder"></div>
+                        <div class="card card-placeholder"></div>
+                    </div>
+                    
+                    <div class="pot" id="pot">Pot: $0</div>
+                    
+                    <div class="players-container" id="players">
+                        <!-- Players will be added here dynamically -->
+                    </div>
+                    
+                    <div id="winner-message" class="winner-message hidden">
+                        <h2>Winner!</h2>
+                        <p id="winner-name">Player 1</p>
+                        <p id="winner-amount">Won $100</p>
+                        <p id="winner-hand">Hand: Royal Flush</p>
+                    </div>
+                </div>
+                
+                <div class="actions-container" id="actions">
+                    <button class="btn btn-danger" id="fold-btn">Fold</button>
+                    <button class="btn btn-success" id="check-btn">Check</button>
+                    <button class="btn btn-primary" id="call-btn">Call</button>
+                    <div class="bet-controls">
+                        <input type="range" id="bet-slider" min="10" max="1000" value="10">
+                        <input type="number" class="bet-input" id="bet-amount" min="10" value="10">
+                    </div>
+                    <button class="btn btn-warning" id="bet-btn">Bet</button>
+                    <button class="btn btn-warning" id="raise-btn">Raise</button>
+                </div>
             </div>
-            
-            <div id="winner-message" class="winner-message hidden">
-                <h2>Winner!</h2>
-                <p id="winner-name">Player 1</p>
-                <p id="winner-amount">Won $100</p>
-            </div>
-        </div>
+        </main>
         
-        <div class="actions" id="actions">
-            <button class="fold-btn" id="fold-btn">Fold</button>
-            <button class="check-btn" id="check-btn">Check</button>
-            <button class="call-btn" id="call-btn">Call</button>
-            <input type="number" class="bet-input" id="bet-amount" min="1" value="10">
-            <button class="bet-btn" id="bet-btn">Bet</button>
-            <button class="raise-btn" id="raise-btn">Raise</button>
-        </div>
+        <footer class="game-footer">
+            <p>© 2023 Texas Hold'em Poker | <button id="rules-btn" class="btn-link">Game Rules</button></p>
+        </footer>
         
-        <div class="chat-container">
-            <div class="chat-box" id="chat-box"></div>
-            <div class="chat-input">
-                <input type="text" id="chat-input" placeholder="Type a message...">
-                <button id="chat-send">Send</button>
+        <div id="rules-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2>Texas Hold'em Rules</h2>
+                <div class="rules-content">
+                    <p>Texas Hold'em is played with a standard 52-card deck. Each player is dealt two private cards, followed by five community cards placed face-up on the table.</p>
+                    <h3>Game Flow:</h3>
+                    <ol>
+                        <li><strong>Pre-flop:</strong> Each player receives two hole cards. Betting round begins.</li>
+                        <li><strong>Flop:</strong> Three community cards are dealt. Betting round.</li>
+                        <li><strong>Turn:</strong> Fourth community card is dealt. Betting round.</li>
+                        <li><strong>River:</strong> Fifth community card is dealt. Final betting round.</li>
+                        <li><strong>Showdown:</strong> Players reveal their hands, best hand wins.</li>
+                    </ol>
+                </div>
             </div>
         </div>
     </div>
     
-    <script>
-        // Game state variables
-        let playerID = '';
-        let playerName = '';
-        let gameState = {};
-        let socket;
-        
-        // Card suit symbols
-        const suitSymbols = {
-            'hearts': '♥',
-            'diamonds': '♦',
-            'clubs': '♣',
-            'spades': '♠'
-        };
-        
-        // Card rank display
-        const rankDisplay = {
-            'A': 'A',
-            'K': 'K',
-            'Q': 'Q',
-            'J': 'J',
-            '10': '10',
-            '9': '9',
-            '8': '8',
-            '7': '7',
-            '6': '6',
-            '5': '5',
-            '4': '4',
-            '3': '3',
-            '2': '2'
-        };
-        
-        // Heartbeat configuration
-        const HEARTBEAT_INTERVAL = 30000; // 30 seconds
-        let heartbeatInterval;
-        let reconnectAttempts = 0;
-        const MAX_RECONNECT_ATTEMPTS = 5;
-        const RECONNECT_DELAY = 3000; // 3 seconds
-        
-        // Start sending heartbeats
-        function startHeartbeat() {
-            // Clear any existing interval
-            if (heartbeatInterval) clearInterval(heartbeatInterval);
-            
-            // Set up new heartbeat interval
-            heartbeatInterval = setInterval(() => {
-                if (socket && socket.readyState === WebSocket.OPEN) {
-                    console.log('Sending heartbeat');
-                    const heartbeatMsg = {
-                        type: 'heartbeat',
-                        payload: { timestamp: Date.now() }
-                    };
-                    socket.send(JSON.stringify(heartbeatMsg));
-                }
-            }, HEARTBEAT_INTERVAL);
-        }
-        
-        // Update connection status UI
-        function updateConnectionStatus(status) {
-            const statusElement = document.getElementById('connection-status');
-            const textElement = document.getElementById('connection-text');
-            
-            statusElement.className = 'connection-status';
-            
-            switch(status) {
-                case 'connected':
-                    statusElement.classList.add('connected');
-                    textElement.textContent = 'Connected';
-                    textElement.style.color = '#33cc33';
-                    break;
-                case 'disconnected':
-                    statusElement.classList.add('disconnected');
-                    textElement.textContent = 'Disconnected';
-                    textElement.style.color = '#ff3333';
-                    break;
-                case 'connecting':
-                    statusElement.classList.add('connecting');
-                    textElement.textContent = 'Connecting...';
-                    textElement.style.color = '#ffcc00';
-                    break;
-            }
-        }
-        
-        // Connect to WebSocket server
-        function connectWebSocket() {
-            // Update status to connecting
-            updateConnectionStatus('connecting');
-            
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/ws`;
-            
-            socket = new WebSocket(wsUrl);
-            
-            socket.onopen = function(e) {
-                console.log('WebSocket connection established');
-                reconnectAttempts = 0; // Reset reconnect attempts on successful connection
-                startHeartbeat(); // Start the heartbeat
-                updateConnectionStatus('connected');
-                addSystemMessage('Connected to server');
-            };
-            
-            socket.onmessage = function(event) {
-                const message = JSON.parse(event.data);
-                handleMessage(message);
-            };
-            
-            socket.onclose = function(event) {
-                console.log('WebSocket connection closed');
-                // Stop the heartbeat when connection is closed
-                if (heartbeatInterval) clearInterval(heartbeatInterval);
-                // Update connection status
-                updateConnectionStatus('disconnected');
-                // Attempt to reconnect
-                attemptReconnect();
-            };
-            
-            socket.onerror = function(error) {
-                console.error('WebSocket error:', error);
-                // Stop the heartbeat on error
-                if (heartbeatInterval) clearInterval(heartbeatInterval);
-                updateConnectionStatus('disconnected');
-                addSystemMessage('Connection error occurred');
-            };
-        }
-        
-        // Reconnect logic
-        function attemptReconnect() {
-            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-                reconnectAttempts++;
-                console.log(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
-                
-                // Update status and notify user
-                updateConnectionStatus('connecting');
-                addSystemMessage(`Attempting to reconnect (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
-                
-                setTimeout(connectWebSocket, RECONNECT_DELAY);
-            } else {
-                console.error('Maximum reconnection attempts reached. Please refresh the page.');
-                // Update status and notify user
-                updateConnectionStatus('disconnected');
-                addSystemMessage('Maximum reconnection attempts reached. Please refresh the page.');
-                
-                // Display reconnection error in game state
-                const gameStateElement = document.getElementById('game-state');
-                gameStateElement.textContent = 'Connection lost. Please refresh the page.';
-                gameStateElement.style.color = 'red';
-            }
-        }
-        
-        // Handle incoming messages
-        function handleMessage(message) {
-            console.log('Received message:', message);
-            
-            switch(message.type) {
-                case 'welcome':
-                    playerID = message.payload.playerID;
-                    playerName = message.payload.playerName;
-                    document.getElementById('player-info').textContent = `You are ${playerName} - Chips: 1000`;
-                    break;
-                    
-                case 'gameState':
-                    gameState = message.payload;
-                    updateGameState();
-                    break;
-                    
-                case 'winner':
-                    showWinner(message.payload);
-                    break;
-                    
-                case 'chat':
-                    addChatMessage(message.payload);
-                    break;
-                    
-                case 'heartbeat_ack':
-                    console.log('Received heartbeat acknowledgment from server');
-                    break;
-                    
-                case 'error':
-                    console.error('Server error:', message.payload.message);
-                    // Optionally display error to user
-                    const errorMsg = `Error: ${message.payload.message}`;
-                    addSystemMessage(errorMsg);
-                    break;
-                    
-                default:
-                    console.log('Unknown message type:', message.type);
-            }
-        }
-        
-        // Update the game state display
-        function updateGameState() {
-            // Update game state info
-            const stateText = {
-                'waiting': 'Waiting for players',
-                'preflop': 'Pre-flop',
-                'flop': 'Flop',
-                'turn': 'Turn',
-                'river': 'River',
-                'showdown': 'Showdown'
-            };
-            
-            document.getElementById('game-state').textContent = `Game State: ${stateText[gameState.state] || gameState.state}`;
-            
-            // Update pot
-            document.getElementById('pot').textContent = `Pot: $${gameState.pot}`;
-            
-            // Update community cards
-            const communityCardsContainer = document.getElementById('community-cards');
-            communityCardsContainer.innerHTML = '';
-            
-            // Add actual community cards
-            for (const card of gameState.communityCards) {
-                communityCardsContainer.appendChild(createCardElement(card));
-            }
-            
-            // Add placeholders for remaining cards
-            const remainingCards = 5 - gameState.communityCards.length;
-            for (let i = 0; i < remainingCards; i++) {
-                const placeholder = document.createElement('div');
-                placeholder.className = 'card card-placeholder';
-                communityCardsContainer.appendChild(placeholder);
-            }
-            
-            // Update players
-            const playersContainer = document.getElementById('players');
-            playersContainer.innerHTML = '';
-            
-            gameState.players.forEach((player, index) => {
-                const playerElement = document.createElement('div');
-                playerElement.className = 'player';
-                
-                if (index === gameState.currentTurn) {
-                    playerElement.classList.add('current-turn');
-                }
-                
-                if (player.folded) {
-                    playerElement.classList.add('folded');
-                }
-                
-                // Highlight current player
-                if (player.id === playerID) {
-                    playerElement.style.borderColor = '#ffcc00';
-                    playerElement.style.borderWidth = '3px';
-                    playerElement.style.borderStyle = 'solid';
-                }
-                
-                // Player name and chips
-                playerElement.innerHTML = `
-                    <div>${player.name} ${player.folded ? '(Folded)' : ''}</div>
-                    <div>Chips: $${player.chips}</div>
-                    <div>Bet: $${player.bet}</div>
-                `;
-                
-                // Player cards
-                const cardsContainer = document.createElement('div');
-                cardsContainer.className = 'player-cards';
-                
-                if (player.holeCards && player.holeCards.length > 0) {
-                    for (const card of player.holeCards) {
-                        cardsContainer.appendChild(createCardElement(card));
-                    }
-                } else {
-                    // Show card backs for other players
-                    for (let i = 0; i < 2; i++) {
-                        const cardBack = document.createElement('div');
-                        cardBack.className = 'card';
-                        cardBack.style.backgroundColor = '#0066cc';
-                        cardBack.style.backgroundImage = 'repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #0066cc 10px, #0066cc 20px)';
-                        cardsContainer.appendChild(cardBack);
-                    }
-                }
-                
-                playerElement.appendChild(cardsContainer);
-                playersContainer.appendChild(playerElement);
-            });
-            
-            // Update action buttons
-            updateActionButtons();
-        }
-        
-        // Create a card element
-        function createCardElement(card) {
-            const cardElement = document.createElement('div');
-            cardElement.className = `card ${card.suit}`;
-            
-            const topValue = document.createElement('div');
-            topValue.className = 'card-value';
-            topValue.textContent = rankDisplay[card.rank];
-            
-            const suitElement = document.createElement('div');
-            suitElement.className = 'card-suit';
-            suitElement.textContent = suitSymbols[card.suit];
-            
-            const bottomValue = document.createElement('div');
-            bottomValue.className = 'card-value';
-            bottomValue.textContent = rankDisplay[card.rank];
-            
-            cardElement.appendChild(topValue);
-            cardElement.appendChild(suitElement);
-            cardElement.appendChild(bottomValue);
-            
-            return cardElement;
-        }
-        
-        // Update action buttons based on game state
-        function updateActionButtons() {
-            const actionsContainer = document.getElementById('actions');
-            const foldBtn = document.getElementById('fold-btn');
-            const checkBtn = document.getElementById('check-btn');
-            const callBtn = document.getElementById('call-btn');
-            const betInput = document.getElementById('bet-amount');
-            const betBtn = document.getElementById('bet-btn');
-            const raiseBtn = document.getElementById('raise-btn');
-            
-            // Hide all buttons initially
-            foldBtn.style.display = 'none';
-            checkBtn.style.display = 'none';
-            callBtn.style.display = 'none';
-            betInput.style.display = 'none';
-            betBtn.style.display = 'none';
-            raiseBtn.style.display = 'none';
-            
-            // If it's not the player's turn or game is in waiting/showdown state, hide all buttons
-            if (!gameState.yourTurn || gameState.state === 'waiting' || gameState.state === 'showdown') {
-                return;
-            }
-            
-            // Find current player
-            const currentPlayer = gameState.players.find(p => p.id === playerID);
-            if (!currentPlayer) return;
-            
-            // Find highest bet
-            let highestBet = 0;
-            for (const player of gameState.players) {
-                if (player.bet > highestBet) {
-                    highestBet = player.bet;
-                }
-            }
-            
-            // Show fold button (always available)
-            foldBtn.style.display = 'block';
-            
-            // Check button is available if no one has bet or player has matched the highest bet
-            if (highestBet === 0 || currentPlayer.bet === highestBet) {
-                checkBtn.style.display = 'block';
-            }
-            
-            // Call button is available if there's a bet to call
-            if (highestBet > currentPlayer.bet) {
-                callBtn.style.display = 'block';
-                callBtn.textContent = `Call $${highestBet - currentPlayer.bet}`;
-            }
-            
-            // Bet/Raise buttons
-            if (currentPlayer.chips > 0) {
-                betInput.style.display = 'block';
-                betInput.min = gameState.bigBlind;
-                betInput.max = currentPlayer.chips;
-                betInput.value = Math.min(gameState.bigBlind, currentPlayer.chips);
-                
-                if (highestBet === 0) {
-                    betBtn.style.display = 'block';
-                } else {
-                    raiseBtn.style.display = 'block';
-                }
-            }
-        }
-        
-        // Show winner message
-        function showWinner(winner) {
-            const winnerMessage = document.getElementById('winner-message');
-            const winnerName = document.getElementById('winner-name');
-            const winnerAmount = document.getElementById('winner-amount');
-            
-            winnerName.textContent = winner.playerName;
-            winnerAmount.textContent = `Won $${winner.amount}`;
-            
-            winnerMessage.classList.remove('hidden');
-            
-            setTimeout(() => {
-                winnerMessage.classList.add('hidden');
-            }, 5000);
-        }
-        
-        // Add chat message
-        function addChatMessage(chatData) {
-            const chatBox = document.getElementById('chat-box');
-            const messageElement = document.createElement('div');
-            
-            messageElement.innerHTML = `<strong>${chatData.playerName}:</strong> ${chatData.message}`;
-            chatBox.appendChild(messageElement);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-        
-        // Add system message to chat
-        function addSystemMessage(message) {
-            const chatBox = document.getElementById('chat-box');
-            const messageElement = document.createElement('div');
-            
-            messageElement.innerHTML = `<em class="system-message">${message}</em>`;
-            messageElement.style.color = '#ff6b6b';
-            chatBox.appendChild(messageElement);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-        
-        // Send player action
-        function sendAction(actionType, amount = 0) {
-            const action = {
-                type: actionType,
-                amount: parseInt(amount, 10)
-            };
-            
-            const message = {
-                type: 'action',
-                payload: action
-            };
-            
-            socket.send(JSON.stringify(message));
-        }
-        
-        // Send chat message
-        function sendChatMessage(text) {
-            if (!text.trim()) return;
-            
-            const message = {
-                type: 'chat',
-                payload: text
-            };
-            
-            socket.send(JSON.stringify(message));
-            document.getElementById('chat-input').value = '';
-        }
-        
-        // Event listeners
-        document.getElementById('fold-btn').addEventListener('click', () => sendAction('fold'));
-        document.getElementById('check-btn').addEventListener('click', () => sendAction('check'));
-        document.getElementById('call-btn').addEventListener('click', () => sendAction('call'));
-        document.getElementById('bet-btn').addEventListener('click', () => {
-            const amount = document.getElementById('bet-amount').value;
-            sendAction('bet', amount);
-        });
-        document.getElementById('raise-btn').addEventListener('click', () => {
-            const amount = document.getElementById('bet-amount').value;
-            sendAction('raise', amount);
-        });
-        
-        document.getElementById('chat-send').addEventListener('click', () => {
-            const chatInput = document.getElementById('chat-input');
-            sendChatMessage(chatInput.value);
-        });
-        
-        document.getElementById('chat-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendChatMessage(e.target.value);
-            }
-        });
-        
-        // Initialize the game
-        window.onload = function() {
-            connectWebSocket();
-        };
-    </script>
+    <script src="js/constants.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/connection.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
