@@ -249,7 +249,9 @@ class Game {
         do {
             this.currentTurn = (this.currentTurn + 1) % this.players.length;
             const player = this.players[this.currentTurn];
-            if (player.active && !player.folded && player.chips > 0) {
+            // Allow players with 0 chips to continue playing if they're still active and not folded
+            // They'll be in an "all-in" state
+            if (player.active && !player.folded) {
                 break;
             }
         } while (this.currentTurn !== initialTurn);
@@ -264,6 +266,8 @@ class Game {
         }
         const highestBet = Math.max(...activePlayers.map(p => p.bet));
         for (const player of activePlayers) {
+            // If a player has chips and hasn't matched the highest bet, the round isn't complete
+            // Players with 0 chips are considered all-in and don't need to match the highest bet
             if (player.bet < highestBet && player.chips > 0) {
                 return false;
             }

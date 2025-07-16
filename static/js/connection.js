@@ -85,6 +85,34 @@ function attemptReconnect() {
 
 // Send player action
 function sendAction(actionType, amount = 0) {
+    const currentPlayer = gameState.players ? gameState.players.find(p => p.id === playerID) : null;
+    if (!currentPlayer) {
+        addSystemMessage('Cannot find your player data');
+        return;
+    }
+    
+    // Handle all-in case for call action
+    if (actionType === 'call') {
+        let highestBet = 0;
+        if (gameState.players) {
+            for (const player of gameState.players) {
+                if (player.bet > highestBet) {
+                    highestBet = player.bet;
+                }
+            }
+        }
+        
+        const amountToCall = highestBet - currentPlayer.bet;
+        // If player doesn't have enough chips to call, they go all-in
+        if (amountToCall > currentPlayer.chips) {
+            amount = currentPlayer.chips;
+            addSystemMessage(`Going all-in with ${amount} chips`);
+        } else if (amount === 0) {
+            // Normal call with the exact amount needed
+            amount = amountToCall;
+        }
+    }
+    
     if (actionType === 'bet' || actionType === 'raise') {
         amount = parseInt(amount, 10);
         if (isNaN(amount) || amount <= 0) {
@@ -92,13 +120,13 @@ function sendAction(actionType, amount = 0) {
             return;
         }
         
-        const currentPlayer = gameState.players ? gameState.players.find(p => p.id === playerID) : null;
-        if (currentPlayer && amount > currentPlayer.chips) {
-            addSystemMessage(`Cannot ${actionType} more than your chips (${currentPlayer.chips})`);
-            return;
+        // Handle all-in case for bet/raise
+        if (amount > currentPlayer.chips) {
+            amount = currentPlayer.chips;
+            addSystemMessage(`Going all-in with ${amount} chips`);
         }
         
-        if (gameState.bigBlind && amount < gameState.bigBlind && gameState.state === 'preflop') {
+        if (gameState.bigBlind && amount < gameState.bigBlind && gameState.state === 'preflop' && amount < currentPlayer.chips) {
             addSystemMessage(`Bet/raise must be at least the big blind (${gameState.bigBlind})`);
             return;
         }

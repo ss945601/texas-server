@@ -77,6 +77,7 @@ function updateActionButtons() {
     const foldBtn = document.getElementById('fold-btn');
     const checkBtn = document.getElementById('check-btn');
     const callBtn = document.getElementById('call-btn');
+    const allInBtn = document.getElementById('all-in-btn');
     const betInput = document.getElementById('bet-amount');
     const betSlider = document.getElementById('bet-slider');
     const betBtn = document.getElementById('bet-btn');
@@ -85,6 +86,7 @@ function updateActionButtons() {
     foldBtn.style.display = 'none';
     checkBtn.style.display = 'none';
     callBtn.style.display = 'none';
+    allInBtn.style.display = 'none';
     betInput.style.display = 'none';
     betSlider.style.display = 'none';
     betBtn.style.display = 'none';
@@ -123,7 +125,11 @@ function updateActionButtons() {
         callBtn.textContent = `Call $${highestBet - currentPlayer.bet}`;
     }
     
+    // Always show All In button if player has chips
     if (currentPlayer.chips > 0) {
+        allInBtn.style.display = 'block';
+        allInBtn.textContent = `All In $${currentPlayer.chips}`;
+        
         betInput.style.display = 'block';
         betSlider.style.display = 'block';
         

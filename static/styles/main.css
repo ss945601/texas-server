@@ -292,6 +292,7 @@ body {
     padding: 1rem;
     background-color: var(--player-bg);
     border-radius: var(--border-radius);
+    flex-wrap: wrap;
 }
 
 .bet-controls {
@@ -310,6 +311,13 @@ body {
 
 #bet-slider {
     width: 150px;
+}
+
+#all-in-btn {
+    background-color: #990000;
+    color: white;
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
 }
 
 /* Chat Container */
