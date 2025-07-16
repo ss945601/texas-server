@@ -54,6 +54,11 @@ class Game {
             this.broadcastGameState();
             return;
         }
+        
+        // Reset any players who might have been marked as folded from the previous round
+        for (const player of this.players) {
+            player.folded = false;
+        }
 
         // Reset game state, preserve chip counts
         this.deck = shuffleDeck(newDeck());
@@ -291,7 +296,17 @@ class Game {
                 break;
             case 'showdown':
                 console.log(`Game ${this.id}: Showdown complete. Starting new round in 5 seconds.`);
-                setTimeout(() => this.startRound(), 5000);
+                // Use a more reliable way to schedule the next round
+                try {
+                    setTimeout(() => {
+                        console.log(`Game ${this.id}: Scheduled new round starting now.`);
+                        this.startRound();
+                    }, 5000);
+                } catch (err) {
+                    console.error(`Game ${this.id}: Error scheduling next round: ${err}`);
+                    // Immediate fallback if setTimeout fails
+                    this.startRound();
+                }
                 return;
         }
 
@@ -337,6 +352,17 @@ class Game {
                 }
             }
             this.pot = 0;
+            // Make sure we advance to the next round
+            console.log(`Game ${this.id}: Uncontested win. Starting new round in 5 seconds.`);
+            try {
+                setTimeout(() => {
+                    console.log(`Game ${this.id}: Scheduled new round starting now after uncontested win.`);
+                    this.startRound();
+                }, 5000);
+            } catch (err) {
+                console.error(`Game ${this.id}: Error scheduling next round after uncontested win: ${err}`);
+                this.startRound();
+            }
             return;
         }
 
@@ -390,6 +416,19 @@ class Game {
         });
 
         this.pot = 0;
+        
+        // Ensure we transition to the next round
+        this.state = 'showdown';
+        console.log(`Game ${this.id}: Multiple winners determined. Starting new round in 5 seconds.`);
+        try {
+            setTimeout(() => {
+                console.log(`Game ${this.id}: Scheduled new round starting now after showdown.`);
+                this.startRound();
+            }, 5000);
+        } catch (err) {
+            console.error(`Game ${this.id}: Error scheduling next round after showdown: ${err}`);
+            this.startRound();
+        }
     }
 
     // Broadcasts game state to all active players
@@ -439,7 +478,8 @@ class Game {
     cleanUpInactivePlayers() {
         this.players = this.players.filter(p => p.active);
         console.log(`Game ${this.id}: Current active players: ${this.players.length}`);
-        if (this.players.length < 2 && this.state !== 'waiting') {
+        // Don't reset the game if it's in showdown state (waiting for next round to start)
+        if (this.players.length < 2 && this.state !== 'waiting' && this.state !== 'showdown') {
             console.log(`Game ${this.id}: Not enough active players (${this.players.length}). Resetting to 'waiting' state.`);
             this.state = 'waiting';
             this.deck = shuffleDeck(newDeck());
