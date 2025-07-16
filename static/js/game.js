@@ -88,13 +88,36 @@ function updateGameState() {
     playersContainer.innerHTML = '';
     
     if (gameState.players && gameState.players.length > 0) {
-        gameState.players.forEach((player, index) => {
+        // Find the current player's index
+        const currentPlayerIndex = gameState.players.findIndex(p => p.id === playerID);
+        
+        // Reorder players so current player is first (position 1)
+        const reorderedPlayers = [];
+        
+        if (currentPlayerIndex !== -1) {
+            // Add players after current player
+            for (let i = currentPlayerIndex; i < gameState.players.length; i++) {
+                reorderedPlayers.push(gameState.players[i]);
+            }
+            
+            // Add players before current player
+            for (let i = 0; i < currentPlayerIndex; i++) {
+                reorderedPlayers.push(gameState.players[i]);
+            }
+        } else {
+            // If current player not found, use original order
+            reorderedPlayers.push(...gameState.players);
+        }
+        
+        reorderedPlayers.forEach((player, index) => {
             if (!player || !player.id) return;
             
             const playerElement = document.createElement('div');
             playerElement.className = 'player';
             
-            if (index === gameState.currentTurn) {
+            // Check if this player has the current turn in the original array
+            const originalIndex = gameState.players.findIndex(p => p.id === player.id);
+            if (originalIndex === gameState.currentTurn) {
                 playerElement.classList.add('current-turn');
             }
             
@@ -117,6 +140,7 @@ function updateGameState() {
             const cardsContainer = document.createElement('div');
             cardsContainer.className = 'player-cards';
             
+            // Always show current player's cards face up
             if (player.holeCards && player.holeCards.length > 0 && (player.id === playerID || gameState.state === 'showdown')) {
                 for (const card of player.holeCards) {
                     cardsContainer.appendChild(createCardElement(card));
@@ -129,6 +153,11 @@ function updateGameState() {
                     cardBack.style.backgroundImage = 'repeating-linear-gradient(45deg, #0055aa, #0055aa 10px, #0066cc 10px, #0066cc 20px)';
                     cardsContainer.appendChild(cardBack);
                 }
+            }
+            
+            // Make current player's cards larger and more prominent
+            if (player.id === playerID) {
+                cardsContainer.classList.add('current-player-cards');
             }
             
             playerElement.appendChild(cardsContainer);

@@ -238,8 +238,22 @@ body {
     height: 75px;
 }
 
+/* Current player's cards styling */
+.current-player-cards {
+    transform: scale(1.2);
+    margin: 0.8rem 0;
+    z-index: 15;
+}
+
+.current-player-cards .card {
+    width: 60px;
+    height: 90px;
+    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+}
+
 /* Player Positions */
-.player:nth-child(1) { bottom: 5%; left: 50%; transform: translateX(-50%); }
+/* Player positions - current player (1st child) is at bottom center */
+.player:nth-child(1) { bottom: 5%; left: 50%; transform: translateX(-50%); } /* Current player (you) */
 .player:nth-child(2) { bottom: 20%; left: 15%; }
 .player:nth-child(3) { top: 50%; left: 5%; transform: translateY(-50%); }
 .player:nth-child(4) { top: 20%; left: 15%; }
