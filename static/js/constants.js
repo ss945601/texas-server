@@ -34,7 +34,9 @@ const STATE_TEXT = {
 };
 
 // WebSocket configuration
-const WS_URL = 'ws://localhost:8080/ws';
+const WS_URL = window.location.protocol === 'https:' 
+    ? `wss://${window.location.host}/ws`
+    : `ws://${window.location.host}/ws`;
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_DELAY = 3000; // 3 seconds
