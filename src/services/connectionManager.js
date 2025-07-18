@@ -64,7 +64,20 @@ function handleConnection(ws) {
     game.players.push(player);
     console.log(`Player ${player.name} (ID: ${player.id}) joined game ${game.id}`);
 
-    if (game.players.length >= 2 && game.state === 'waiting') {
+    // Deal hole cards to the player if the game is already in progress
+    if (game.state !== 'waiting' && game.state !== 'showdown') {
+        if (game.deck.length < 2) {
+            console.log(`Error: Not enough cards in deck for new player ${player.id}. Reshuffling.`);
+            game.deck = shuffleDeck(newDeck());
+        }
+        player.holeCards = [game.deck.shift(), game.deck.shift()];
+        console.log(`Game ${game.id}: Dealt hole cards to new player ${player.name}`);
+        
+        // Broadcast updated game state to all players
+        game.broadcastGameState();
+    }
+    // Start the game if there are enough players and it's in waiting state
+    else if (game.players.length >= 2 && game.state === 'waiting') {
         console.log(`Game ${game.id}: Enough players (${game.players.length}) to start.`);
         game.startRound();
     }
@@ -116,7 +129,7 @@ function handleConnection(ws) {
                     sendErrorMessage(ws, 'Invalid chat message format.');
                     return;
                 }
-                const chatMsg = new Message('chat', {
+                const chatMsg = new Message(' chat', {
                     playerID: player.id,
                     playerName: player.name,
                     message: msg.payload

@@ -112,6 +112,20 @@ class Game {
 
         // Deal hole cards
         this.dealHoleCards();
+        
+        // Verify all active players have hole cards
+        const playersWithoutCards = this.players.filter(p => p.active && (!p.holeCards || p.holeCards.length !== 2));
+        if (playersWithoutCards.length > 0) {
+            console.log(`Game ${this.id}: Found ${playersWithoutCards.length} players without cards. Re-dealing.`);
+            // Re-deal cards to players who don't have them
+            for (const player of playersWithoutCards) {
+                if (this.deck.length < 2) {
+                    console.log(`Error: Not enough cards in deck for player ${player.id}. Reshuffling.`);
+                    this.deck = shuffleDeck(newDeck());
+                }
+                player.holeCards = [this.deck.shift(), this.deck.shift()];
+            }
+        }
 
         // Broadcast game state
         this.broadcastGameState();
@@ -160,7 +174,7 @@ class Game {
 
             case 'call':
                 let amountToCall = highestBet - player.bet;
-                if (amountToCall <= 0) {
+                if (amountToCall < 0) {
                     console.log(`Game ${this.id}: Invalid call from ${player.name}. No amount to call.`);
                     sendErrorMessage(player.conn, 'No amount to call.');
                     return;
@@ -299,8 +313,17 @@ class Game {
                 this.determineWinner();
                 break;
             case 'showdown':
-                console.log(`Game ${this.id}: Showdown complete. Starting new round in 5 seconds.`);
-                // Use a more reliable way to schedule the next round
+                console.log(`Game ${this.id}: Showdown complete. Checking player chips before starting new round.`);
+                // Check if any players have no chips left
+                const playersWithChips = this.players.filter(p => p.active && p.chips > 0).length;
+                if (playersWithChips < 2) {
+                    console.log(`Game ${this.id}: Not enough players with chips (${playersWithChips}). Game stopped.`);
+                    this.state = 'waiting';
+                    this.broadcastGameState();
+                    return;
+                }
+
+                // Schedule next round if enough players have chips
                 try {
                     setTimeout(() => {
                         console.log(`Game ${this.id}: Scheduled new round starting now.`);
