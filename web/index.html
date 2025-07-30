@@ -1,38 +1,388 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
-  <base href="/">
-
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
-
-  <!-- iOS meta tags & icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="socket_flutter_app">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="favicon.png"/>
-
-  <title>socket_flutter_app</title>
-  <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poker Room Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .room {
+            border: 1px solid #ddd;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .room-name {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .room-info {
+            color: #666;
+            font-size: 0.9em;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 2px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .current-room {
+            background: #e8f5e8;
+            border: 2px solid #28a745;
+        }
+        .player-list {
+            margin: 10px 0;
+        }
+        .player {
+            padding: 5px;
+            margin: 2px 0;
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+        .chat {
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .chat-message {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input input {
+            flex: 1;
+        }
+    </style>
 </head>
 <body>
-  <script src="flutter_bootstrap.js" async></script>
+    <div class="container">
+        <h1>Poker Room Manager</h1>
+        <div id="connection-status">Connecting...</div>
+    </div>
+
+    <div id="lobby-container" class="container">
+        <h2>Available Rooms</h2>
+        <button onclick="refreshRooms()">Refresh Rooms</button>
+        <div id="rooms-list"></div>
+        
+        <h3>Create New Room</h3>
+        <div class="form-group">
+            <label>Room Name:</label>
+            <input type="text" id="room-name" placeholder="Enter room name">
+        </div>
+        <div class="form-group">
+            <label>Max Players:</label>
+            <select id="max-players">
+                <option value="2">2</option>
+                <option value="4">4</option>
+                <option value="6">6</option>
+                <option value="8">8</option>
+                <option value="9" selected>9</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="is-private"> Private Room
+            </label>
+        </div>
+        <div class="form-group" id="password-group" style="display: none;">
+            <label>Password:</label>
+            <input type="password" id="room-password" placeholder="Enter password">
+        </div>
+        <button onclick="createRoom()">Create Room</button>
+    </div>
+
+    <div id="room-container" class="container" style="display: none;">
+        <h2 id="current-room-name">Room</h2>
+        <div id="room-info"></div>
+        
+        <h3>Players</h3>
+        <div id="players-list"></div>
+        
+        <div id="room-actions">
+            <button id="leave-room-btn" onclick="leaveRoom()">Leave Room</button>
+            <button id="start-game-btn" onclick="startGame()" style="display: none;">Start Game</button>
+        </div>
+        
+        <h3>Chat</h3>
+        <div id="chat-messages" class="chat"></div>
+        <div class="chat-input">
+            <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="handleChatKeyPress(event)">
+            <button onclick="sendChat()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let ws;
+        let currentRoom = null;
+
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                document.getElementById('connection-status').textContent = 'Connected';
+                document.getElementById('connection-status').style.color = 'green';
+            };
+            
+            ws.onmessage = function(event) {
+                const message = JSON.parse(event.data);
+                handleMessage(message);
+            };
+            
+            ws.onclose = function() {
+                document.getElementById('connection-status').textContent = 'Disconnected';
+                document.getElementById('connection-status').style.color = 'red';
+                setTimeout(connect, 3000);
+            };
+            
+            ws.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function handleMessage(message) {
+            console.log('Received:', message);
+            
+            switch (message.type) {
+                case 'welcome':
+                    console.log('Welcome message:', message.payload);
+                    break;
+                    
+                case 'rooms_list':
+                    displayRooms(message.payload);
+                    break;
+                    
+                case 'room_created':
+                    currentRoom = message.payload.room;
+                    showRoom(message.payload.room);
+                    break;
+                    
+                case 'room_joined':
+                    currentRoom = message.payload.room;
+                    showRoom(message.payload.room);
+                    break;
+                    
+                case 'room_left':
+                    currentRoom = null;
+                    showLobby();
+                    break;
+                    
+                case 'room_updated':
+                    if (currentRoom && currentRoom.id === message.payload.id) {
+                        currentRoom = message.payload;
+                        updateRoomDisplay(message.payload);
+                    }
+                    break;
+                    
+                case 'game_started':
+                    alert('Game started!');
+                    break;
+                    
+                case 'chat':
+                    addChatMessage(message.payload);
+                    break;
+                    
+                case 'error':
+                    alert('Error: ' + message.payload.message);
+                    break;
+            }
+        }
+
+        function displayRooms(rooms) {
+            const container = document.getElementById('rooms-list');
+            container.innerHTML = '';
+            
+            if (rooms.length === 0) {
+                container.innerHTML = '<p>No rooms available. Create one!</p>';
+                return;
+            }
+            
+            rooms.forEach(room => {
+                const roomDiv = document.createElement('div');
+                roomDiv.className = 'room';
+                roomDiv.innerHTML = `
+                    <div class="room-header">
+                        <span class="room-name">${room.name}</span>
+                        <span class="room-info">${room.currentPlayers}/${room.maxPlayers} players</span>
+                    </div>
+                    <div class="room-info">
+                        ${room.isPrivate ? 'Private Room' : 'Public Room'} | Host: ${room.players.find(p => p.id === room.host)?.name || 'Unknown'}
+                    </div>
+                    <button onclick="joinRoom('${room.id}')">Join Room</button>
+                `;
+                container.appendChild(roomDiv);
+            });
+        }
+
+        function createRoom() {
+            const name = document.getElementById('room-name').value;
+            const maxPlayers = parseInt(document.getElementById('max-players').value);
+            const isPrivate = document.getElementById('is-private').checked;
+            const password = isPrivate ? document.getElementById('room-password').value : null;
+            
+            if (!name.trim()) {
+                alert('Please enter a room name');
+                return;
+            }
+            
+            ws.send(JSON.stringify({
+                type: 'create_room',
+                payload: { name, maxPlayers, isPrivate, password }
+            }));
+        }
+
+        function joinRoom(roomId) {
+            const password = prompt('Enter room password (if required):');
+            ws.send(JSON.stringify({
+                type: 'join_room',
+                payload: { roomId, password }
+            }));
+        }
+
+        function leaveRoom() {
+            ws.send(JSON.stringify({ type: 'leave_room' }));
+        }
+
+        function startGame() {
+            ws.send(JSON.stringify({ type: 'start_game' }));
+        }
+
+        function refreshRooms() {
+            ws.send(JSON.stringify({ type: 'get_rooms' }));
+        }
+
+        function showRoom(room) {
+            document.getElementById('lobby-container').style.display = 'none';
+            document.getElementById('room-container').style.display = 'block';
+            
+            updateRoomDisplay(room);
+        }
+
+        function showLobby() {
+            document.getElementById('lobby-container').style.display = 'block';
+            document.getElementById('room-container').style.display = 'none';
+            refreshRooms();
+        }
+
+        function updateRoomDisplay(room) {
+            document.getElementById('current-room-name').textContent = room.name;
+            document.getElementById('room-info').innerHTML = `
+                <p>Players: ${room.currentPlayers}/${room.maxPlayers}</p>
+                <p>Status: ${room.status}</p>
+                <p>Host: ${room.players.find(p => p.id === room.host)?.name || 'Unknown'}</p>
+            `;
+            
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = '';
+            room.players.forEach(player => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player';
+                playerDiv.textContent = `${player.name} (${player.chips} chips)`;
+                if (player.id === room.host) {
+                    playerDiv.textContent += ' [HOST]';
+                }
+                playersList.appendChild(playerDiv);
+            });
+            
+            // Show/hide start button for host
+            const startBtn = document.getElementById('start-game-btn');
+            if (room.host === ws._playerId && room.status === 'waiting' && room.currentPlayers >= 2) {
+                startBtn.style.display = 'inline-block';
+            } else {
+                startBtn.style.display = 'none';
+            }
+        }
+
+        function addChatMessage(data) {
+            const chatDiv = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.innerHTML = `<strong>${data.playerName}:</strong> ${data.message}`;
+            chatDiv.appendChild(messageDiv);
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (message) {
+                ws.send(JSON.stringify({
+                    type: 'chat',
+                    payload: message
+                }));
+                input.value = '';
+            }
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChat();
+            }
+        }
+
+        // Handle private room checkbox
+        document.getElementById('is-private').addEventListener('change', function() {
+            const passwordGroup = document.getElementById('password-group');
+            passwordGroup.style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Initialize
+        connect();
+    </script>
 </body>
 </html>
